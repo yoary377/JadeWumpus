@@ -1,27 +1,28 @@
 package org.example.agents;
 
+import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 import jade.wrapper.AgentController;
+import jade.wrapper.ControllerException;
 import jade.wrapper.StaleProxyException;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Random;
 
 public class WorldAgent extends Agent {
-    private int[][] cave;
-    private int playerX = 0;
-    private int playerY = 3;
+    static Tile[][] cave = new Tile[4][4];
+
+
+    private int playerX=0;
+    private int playerY=3;
 
 
     protected void setup() {
-        initializeCave();
-        printCave();
-        addBehaviour(new CheckPositionBehaviour());
-        addBehaviour(new HandlePlayerMovements());
-
-        // Start the player agent
         Object[] args = {this}; // Pass reference to this WorldAgent
         try {
             AgentController player = getContainerController().createNewAgent("PlayerAgent", PlayerAgent.class.getName(), args);
@@ -29,9 +30,18 @@ public class WorldAgent extends Agent {
         } catch (StaleProxyException e) {
             e.printStackTrace();
         }
+
+
+        initializeCave();
+        printCave();
+        addBehaviour(new CheckPositionBehaviour());
+        addBehaviour(new HandlePlayerMovements());
+
     }
 
+
     private class CheckPositionBehaviour extends CyclicBehaviour {
+
         public void action() {
             ACLMessage msg = receive();
             if (msg != null) {
@@ -43,9 +53,6 @@ public class WorldAgent extends Agent {
                     ACLMessage reply = new ACLMessage(ACLMessage.INFORM);
                     reply.addReceiver(msg.getSender());
                     reply.setContent(String.join(",", surroundings));
-
-                    // Display the sent message
-                    System.out.println(getLocalName() + " sent: " + reply.getContent());
                     send(reply);
                 }
             } else {
@@ -56,54 +63,35 @@ public class WorldAgent extends Agent {
 
     // Method to check surroundings and return information
     private String[] checkSurroundings() {
-        // Check player's surroundings (for example, based on your cave structure)
-        // For this example, assuming the player is at position (0,0)
-        String[] surroundings = new String[5];
+        String[] surroundings = new String[3];
         Arrays.fill(surroundings, "none"); // Default: no indication
 
-        // Logic to check surroundings and update the array
-        // For instance, if the player is near a pit, update surroundings[0] to "breeze"
-        // Implement your specific logic here based on the game rules
-        // This is a sample representation:
-        if (playerIsNearPit()) {
+        // Get player's current tile
+        Tile currentPlayerTile = cave[playerY][playerX];
+
+        // Logic to check the player's current tile for specific statuses
+        if (currentPlayerTile.hasStatus("Breeze")) {
             surroundings[0] = "breeze";
         }
-        if (playerIsNearWumpus()) {
-            surroundings[1] = "smell";
+        if (currentPlayerTile.hasStatus("Stench")) {
+            surroundings[1] = "stench";
         }
-        if (playerIsNearGold()) {
+        if (currentPlayerTile.hasStatus("Gold")) {
             surroundings[2] = "glitter";
         }
+
         return surroundings;
     }
 
-    // Sample methods for proximity checks (replace with your actual logic)
-    private boolean playerIsNearPit() {
-        // Sample logic to check if the player is near a pit
-        // For example, if the player is at (0,0) and a pit is at (0,1)
-        return getPlayerX() == 0 && getPlayerY() == 0;
-    }
-
-    private boolean playerIsNearWumpus() {
-        // Sample logic to check if the player is near the wumpus
-        // For example, if the player is at (1,1) and the wumpus is at (2,1)
-        return getPlayerX() == 1 && getPlayerY() == 1;
-    }
-
-    private boolean playerIsNearGold() {
-        // Sample logic to check if the player is near the gold
-        // For example, if the player is at (1,1) and the gold is at (2,2)
-        return getPlayerX() == 1 && getPlayerY() == 1;
-    }
 
     // Sample methods to get player position (replace with your actual player tracking logic)
-    protected int getPlayerX() {
+    public int getPlayerX() {
         // Return player's X position
         // Implement your actual player position tracking logic here
         return playerX; // Sample: player X position is 0
     }
 
-    protected int getPlayerY() {
+    public int getPlayerY() {
         // Return player's Y position
         // Implement your actual player position tracking logic here
         return playerY; // Sample: player Y position is 0
@@ -118,23 +106,54 @@ public class WorldAgent extends Agent {
         playerX = x;
     }
 
+    private void addPit(int x, int y) {
+        cave[y][x].addStatus("Pit"); // Setting the pit at coordinates (x, y)
+
+        // Logic to add breeze to adjacent tiles
+        if (x > 0) {
+            cave[y][x - 1].addStatus("Breeze");
+        }
+        if (x < 3) {
+            cave[y][x + 1].addStatus("Breeze");
+        }
+        if (y > 0) {
+            cave[y - 1][x].addStatus("Breeze");
+        }
+        if (y < 3) {
+            cave[y + 1][x].addStatus("Breeze");
+        }
+    }
+
+    private void addWumpus(int x, int y) {
+        cave[y][x].addStatus("Wumpus"); // Setting the Wumpus at coordinates (x, y)
+
+        // Logic to add stench to adjacent tiles
+        if (x > 0) {
+            cave[y][x - 1].addStatus("Stench");
+        }
+        if (x < 3) {
+            cave[y][x + 1].addStatus("Stench");
+        }
+        if (y > 0) {
+            cave[y - 1][x].addStatus("Stench");
+        }
+        if (y < 3) {
+            cave[y + 1][x].addStatus("Stench");
+        }
+    }
+
     // Initialize the 4x4 cave with default values
     private void initializeCave() {
-        cave = new int[4][4];
-        // Fill the cave with default values
+        // Initialize the cave with empty tiles
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
-                cave[i][j] = 0; // Empty cell by default
+                cave[i][j] = new Tile();
             }
         }
-        // Add pits, gold, wumpus, and player
-        cave[0][3] = 1; // Pit at position (0,3)
-        cave[1][3] = 1; // Pit at position (1,3)
-        cave[2][0] = 1; // Pit at position (2,0)
-        cave[3][2] = 1; // Pit at position (3,2)
-        cave[0][0] = 2; // Wumpus at position (0,0)
-        cave[playerY][playerX] = 3; // Player at position (0,1)
-        cave[2][1] = 4; // Gold at position (2,1)
+        addPit(2, 3);
+        addPit(2, 1);
+        addPit(3, 0);
+        addWumpus(0, 1);
     }
 
     // Print the cave structure (for demonstration purposes)
@@ -144,11 +163,11 @@ public class WorldAgent extends Agent {
             for (int j = 0; j < 4; j++) {
                 if (i == playerY && j == playerX) {
                     System.out.print("A "); // Player
-                } else if (cave[i][j] == 1) {
+                } else if (cave[i][j].getStatuses().contains("Pit")) {
                     System.out.print("P "); // Pit
-                } else if (cave[i][j] == 2) {
+                } else if (cave[i][j].getStatuses().contains("Wumpus")) {
                     System.out.print("W "); // Wumpus
-                } else if (cave[i][j] == 4) {
+                } else if (cave[i][j].getStatuses().contains("Gold")) {
                     System.out.print("G "); // Gold
                 } else {
                     System.out.print("- "); // Empty cell
@@ -158,25 +177,129 @@ public class WorldAgent extends Agent {
         }
     }
 
+    private boolean isValidCoordinate(int x, int y) {
+        return x >= 0 && x < 4 && y >= 0 && y < 4;
+    }
+
+    private List<String> checkTileStatus(int x, int y) {
+        if (isValidCoordinate(x, y)) {
+            return cave[y][x].getStatuses();
+        } else {
+            // Handle out-of-bounds coordinates, return an empty list
+            return Collections.emptyList(); // Returning an empty list
+        }
+    }
+
+    private void setPlayerLocation(int newX, int newY) {
+        if (isValidCoordinate(newX, newY)) {
+            playerX = newX;
+            playerY = newY;
+        } else {
+            // Handle invalid coordinates, if needed
+            // For example, throw an IllegalArgumentException or handle it based on your game logic
+            System.out.println("Invalid coordinates for setting player location.");
+        }
+    }
+
+    private void doExit() {
+        stopAgent("PlayerAgent");
+        stopAgent("NavigatorAgent");
+        stopAgent("WorldAgent");
+        System.exit(0);
+    }
+
+    private void stopAgent(String agentName) {
+        try {
+            AgentController agentController = getContainerController().getAgent(agentName);
+            if (agentController != null) {
+                agentController.kill();
+            }
+        } catch (ControllerException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void movePlayer(int newX, int newY) {
+        if (isValidCoordinate(newX, newY)) {
+            if (checkTileStatus(newX, newY).contains("Pit")) {
+                System.out.println("Game Over! You fell into a pit!");
+                doDelete(); // Terminate the player agent
+                // Optionally: handle other game-over actions or exit the game
+                doExit(); // Exit the game
+            } else if (checkTileStatus(newX, newY).contains("Wumpus")) {
+                System.out.println("Game Over! You encountered the Wumpus!");
+                doDelete(); // Terminate the player agent
+                // Optionally: handle other game-over actions or exit the game
+                doExit(); // Exit the game
+            } else {
+                // Update the player's position
+                setPlayerLocation(newX, newY);
+                // Additional actions when the player moves to a safe tile
+            }
+        } else {
+            System.out.println("Invalid move! Out of bounds.");
+            // Handle invalid move according to game rules
+        }
+    }
+
 
     private class HandlePlayerMovements extends CyclicBehaviour {
         public void action() {
-            MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.INFORM);
+            MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.CFP);
             ACLMessage msg = receive(mt);
 
-            if (msg != null && msg.getContent().equals("Move up")) {
-                System.out.println(playerY);
-                // Move the player coordinates up if it's within the bounds of the cave
-                if (playerY > 0) {
-                    playerY--;
-                    System.out.println("Player moved up to coordinates: (" + playerX + "," + playerY + ")");
-                } else {
-                    System.out.println("Player cannot move up. Already at the top.");
+            if (msg != null) {
+                if (msg.getContent().equals("Move up")) {
+                    movePlayer(getPlayerX(), getPlayerY() - 1); // Move the player up
                 }
+                if (msg.getContent().equals("Move down")) {
+                    movePlayer(getPlayerX(), getPlayerY() + 1);
+                }
+                if (msg.getContent().equals("Move right")) {
+                    movePlayer(getPlayerX()+1, getPlayerY());
+                }
+                if (msg.getContent().equals("Move left")) {
+                    movePlayer(getPlayerX()-1, getPlayerY());
+                }
+                if (msg.getContent().equals("Move randomly")) {
+                    boolean moved = false;
+                    while (!moved) {
+                        Random random = new Random();
+                        int randomNumber = random.nextInt(4); // Generate a random number between 0 and 3
+
+                        // Store the current player position
+                        int currentX = getPlayerX();
+                        int currentY = getPlayerY();
+
+                        // Move randomly based on the generated number without hitting walls
+                        if (randomNumber == 0 && currentY > 0) {
+                            movePlayer(currentX, currentY - 1); // Move up
+                            System.out.println("Moved randomly up");
+                            moved = true;
+                        } else if (randomNumber == 1 && currentY < 3) {
+                            movePlayer(currentX, currentY + 1); // Move down
+                            System.out.println("Moved randomly down");
+                            moved = true;
+                        } else if (randomNumber == 2 && currentX < 3) {
+                            movePlayer(currentX + 1, currentY); // Move right
+                            System.out.println("Moved randomly right");
+                            moved = true;
+                        } else if (randomNumber == 3 && currentX > 0) {
+                            movePlayer(currentX - 1, currentY); // Move left
+                            System.out.println("Moved randomly left");
+                            moved = true;
+                        }
+                    }
+                }
+                ACLMessage moveMsg = new ACLMessage(ACLMessage.CONFIRM);
+                moveMsg.addReceiver(new AID("PlayerAgent", AID.ISLOCALNAME));
+                moveMsg.setContent("OK");
+                send(moveMsg);
                 printCave();
             } else {
-                // Handle other instructions or situations as needed
+                block(); // Wait for a message before executing the behavior again
             }
+
         }
     }
 }

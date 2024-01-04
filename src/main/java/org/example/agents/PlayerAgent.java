@@ -21,7 +21,6 @@ public class PlayerAgent extends Agent {
             // Set the player's position in the world
             world.setPlayerPosition(playerName, 0, 3);
             // Print player's position
-            System.out.printf(playerName + " is positioned at (%d,%d) in the cave.%n", world.getPlayerX(), world.getPlayerY());
         } else {
             System.out.println("No reference to WorldAgent found.");
             doDelete();
@@ -32,7 +31,6 @@ public class PlayerAgent extends Agent {
         private int state = 0;
         private boolean receivedMoveUp = false;
 
-        private int why = 0;
 
         public void action() {
             switch (state) {
@@ -53,7 +51,7 @@ public class PlayerAgent extends Agent {
                         System.out.println(getLocalName() + " received surroundings: " + Arrays.toString(surroundings));
 
                         // Send the received surroundings to the navigator agent
-                        ACLMessage navigateMsg = new ACLMessage(ACLMessage.INFORM);
+                        ACLMessage navigateMsg = new ACLMessage(ACLMessage.CFP);
                         navigateMsg.addReceiver(new AID("NavigatorAgent", AID.ISLOCALNAME));
                         navigateMsg.setContent(msg.getContent());
                         send(navigateMsg);
@@ -64,33 +62,65 @@ public class PlayerAgent extends Agent {
                     break;
                 case 2:
                     // Behavior to handle the response from Navigator
-                    MessageTemplate mt2 = MessageTemplate.MatchPerformative(ACLMessage.INFORM);
+                    MessageTemplate mt2 = MessageTemplate.MatchPerformative(ACLMessage.PROPOSE);
                     ACLMessage msg2 = receive(mt2);
                     if (msg2 != null && msg2.getContent().equals("Move up")) {
-                        System.out.println("I moved up");
-                        receivedMoveUp = true;
-                        state ++;
-                    } else {
-                        block();
-                    }
-                    break;
-                case 3:
-                    // Behavior to inform the world about intended movement direction
-                    if (receivedMoveUp) {
-                        ACLMessage moveMsg = new ACLMessage(ACLMessage.INFORM);
+                        ACLMessage moveMsg = new ACLMessage(ACLMessage.CFP);
                         moveMsg.addReceiver(new AID("WorldAgent", AID.ISLOCALNAME));
                         moveMsg.setContent("Move up"); // Informing the world about moving up
                         send(moveMsg);
-                        if (why==4){
-                            return;
-                        }
-                        why++;
+                        state++;
+                        break;
+
+                    }
+                    if (msg2 != null && msg2.getContent().equals("Move down")) {
+                        ACLMessage moveMsg = new ACLMessage(ACLMessage.CFP);
+                        moveMsg.addReceiver(new AID("WorldAgent", AID.ISLOCALNAME));
+                        moveMsg.setContent("Move down"); // Informing the world about moving up
+                        send(moveMsg);
+                        state++;
+                        break;
+
+                    }
+                    if (msg2 != null && msg2.getContent().equals("Move right")) {
+                        ACLMessage moveMsg = new ACLMessage(ACLMessage.CFP);
+                        moveMsg.addReceiver(new AID("WorldAgent", AID.ISLOCALNAME));
+                        moveMsg.setContent("Move right"); // Informing the world about moving up
+                        send(moveMsg);
+                        state++;
+                        break;
+
+                    }
+                    if (msg2 != null && msg2.getContent().equals("Move left")) {
+                        ACLMessage moveMsg = new ACLMessage(ACLMessage.CFP);
+                        moveMsg.addReceiver(new AID("WorldAgent", AID.ISLOCALNAME));
+                        moveMsg.setContent("Move left"); // Informing the world about moving up
+                        send(moveMsg);
+                        state++;
+                        break;
+                    }
+                    if (msg2 != null && msg2.getContent().equals("Move randomly")) {
+                        ACLMessage moveMsg = new ACLMessage(ACLMessage.CFP);
+                        moveMsg.addReceiver(new AID("WorldAgent", AID.ISLOCALNAME));
+                        moveMsg.setContent("Move randomly"); // Informing the world about moving up
+                        send(moveMsg);
+                        state++;
+                        break;
+
                     } else {
                         block();
                     }
-                    // Move back to state 0 to restart the sequence
-                    state = 0;
-                    break;
+
+                case 3:
+                    // Behavior to inform the world about intended movement direction
+                    MessageTemplate mt3 = MessageTemplate.MatchPerformative(ACLMessage.CONFIRM);
+                    ACLMessage msg3 = receive(mt3);
+                    if (msg3 != null && msg3.getContent().equals("OK")) {
+                        state = 0;
+                        break;
+                    } else {
+                        block();
+                    }
             }
         }
     }
