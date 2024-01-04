@@ -16,6 +16,11 @@ public class PlayerAgent extends Agent {
             "It's a breeze here."
     };
 
+    String[] helpMessage = {
+            "Help, I don't know where to go!",
+            "I might need some help down there!"
+    };
+
 
     String[] responsesStench = {
             "Ugh, it stinks in this area.",
@@ -61,7 +66,7 @@ public class PlayerAgent extends Agent {
 
                     ACLMessage inquirePosition = new ACLMessage(ACLMessage.REQUEST);
                     inquirePosition.addReceiver(new AID("WorldAgent", AID.ISLOCALNAME));
-                    inquirePosition.setContent("Hey, I need some help!");
+                    inquirePosition.setContent(helpMessage[random.nextInt(helpMessage.length)]);
                     send(inquirePosition);
                     state++;
                     System.out.println(getLocalName() + ": " + inquirePosition.getContent());

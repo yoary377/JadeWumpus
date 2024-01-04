@@ -46,7 +46,7 @@ public class WorldAgent extends Agent {
             ACLMessage msg = receive();
             if (msg != null) {
                 String content = msg.getContent();
-                if (content.equals("Hey, I need some help!")) {
+                if (content.matches("(?i).*\\bhelp\\b.*")) {
                     String[] surroundings = checkSurroundings();
                     ACLMessage reply = new ACLMessage(ACLMessage.INFORM);
                     reply.addReceiver(msg.getSender());
@@ -288,19 +288,19 @@ public class WorldAgent extends Agent {
                         // Move randomly based on the generated number without hitting walls
                         if (randomNumber == 0 && currentY > 0) {
                             movePlayer(currentX, currentY - 1); // Move up
-                            System.out.println("Moved randomly up");
+                            System.out.println(getLocalName() + ": Mr.Navigator,I moved him up");
                             moved = true;
                         } else if (randomNumber == 1 && currentY < 3) {
                             movePlayer(currentX, currentY + 1); // Move down
-                            System.out.println("Moved randomly down");
+                            System.out.println(getLocalName() + ": Mr.Navigator,I moved him down");
                             moved = true;
                         } else if (randomNumber == 2 && currentX < 3) {
                             movePlayer(currentX + 1, currentY); // Move right
-                            System.out.println("Moved randomly right");
+                            System.out.println(getLocalName() + ": Mr.Navigator,I moved him to the right");
                             moved = true;
                         } else if (randomNumber == 3 && currentX > 0) {
                             movePlayer(currentX - 1, currentY); // Move left
-                            System.out.println("Moved randomly left");
+                            System.out.println(getLocalName() + ": Mr.Navigator,He went left");
                             moved = true;
                         }
                     }
