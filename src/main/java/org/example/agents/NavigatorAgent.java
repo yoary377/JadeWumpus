@@ -21,40 +21,43 @@ public class NavigatorAgent extends Agent {
 
     }
 
-    private void updateNearbyTiles(int currentX, int currentY, String[] surroundings) {
+    private void updateNearbyTiles(int currentX, int currentY, String surroundings) {
         // Update the current tile as visited
         worldGrid[currentX][currentY].setVisited(true);
 
+        // Split the surroundings into an array of words
+        String[] perceptions = surroundings.split("\\s+");
+
         // Update nearby tiles based on the perceived surroundings
         // Assuming the agent perceives surroundings in North, East, South, West directions
-        // Check for breeze perception (only in the 0th element)
-        if (surroundings[0].equals("breeze")||surroundings[1].equals("stench")) {
-            // Mark nearby tiles as unsafe (potential pits)
-            if (currentY > 0) {
-                worldGrid[currentX][currentY-1].setSafe(false);
-                System.out.println("SET UNSAFE");// North
+        for (String perception : perceptions) {
+            if (perception.matches("(?i).*\\bbreeze\\b.*") || perception.matches("(?i).*\\bstinks\\b.*")) {
+                // Mark nearby tiles as unsafe (potential pits)
+                if (currentY > 0) {
+                    worldGrid[currentX][currentY - 1].setSafe(false); // North
+                }
+                if (currentY < 3) {
+                    worldGrid[currentX][currentY + 1].setSafe(false); // South
+                }
+                if (currentX < 3) {
+                    worldGrid[currentX + 1][currentY].setSafe(false); // East
+                }
+                if (currentX > 0) {
+                    worldGrid[currentX - 1][currentY].setSafe(false); // West
+                }
             }
-            if (currentY < 3) {
-                System.out.println(worldGrid[currentX][currentY]);
-                worldGrid[currentX][currentY+1].setSafe(false); // South
+            if (perception.matches("(?i).*\\bgold\\b.*")) {
+                worldGrid[currentX][currentY].setGoldPresent(true);
             }
-            if (currentX < 3) {
-                System.out.println(currentY);
-                worldGrid[currentX+1][currentY].setSafe(false); // East
-            }
-            if (currentX > 0) {
-                System.out.println(worldGrid[currentX][currentY]);
-                worldGrid[currentX-1][currentY].setSafe(false); // West
-            }
+
         }
     }
     private class GuidePlayerBehaviour extends CyclicBehaviour {
         public void action() {
             ACLMessage msg = receive();
             if (msg != null && msg.getSender().getLocalName().equals("PlayerAgent") && msg.getContent().length()>2) {
-                String[] surroundings = msg.getContent().split(",");
+                String surroundings = msg.getContent();
                 updateNearbyTiles(worldAgent.getPlayerX(), worldAgent.getPlayerY(), surroundings);
-
                 String nextMove = decideNextMove(worldAgent.getPlayerX(), worldAgent.getPlayerY());
                 ACLMessage moveMsg = new ACLMessage(ACLMessage.PROPOSE);
                 moveMsg.addReceiver(new AID("PlayerAgent", AID.ISLOCALNAME));
@@ -69,20 +72,25 @@ public class NavigatorAgent extends Agent {
         private String decideNextMove(int currentX, int currentY) {
             // Logic to check nearby safe and unvisited tiles
             if (currentY > 0 && !worldGrid[currentX][currentY - 1].isVisited() && worldGrid[currentX][currentY - 1].isSafe()) {
-                player.storeMovement("Move up"); // Store the movement
-                return "Move up";
+                player.storeMovement("I think you need to go up"); // Store the movement
+                return "I think you need to go up";
             }
             if (currentY < 3 && !worldGrid[currentX][currentY + 1].isVisited() && worldGrid[currentX][currentY + 1].isSafe()) {
-                player.storeMovement("Move down"); // Store the movement
-                return "Move down";
+                player.storeMovement("I guess you need to go down"); // Store the movement
+                return "I guess you need to go down";
             }
             if (currentX < 3 && !worldGrid[currentX + 1][currentY].isVisited() && worldGrid[currentX + 1][currentY].isSafe()) {
-                player.storeMovement("Move right"); // Store the movement
-                return "Move right";
+                player.storeMovement("Right is the right way! You get it? Right! Ahaha"); // Store the movement
+                return "Right is the right way! You get it? Right! Ahaha";
             }
             if (currentX > 0 && !worldGrid[currentX - 1][currentY].isVisited() && worldGrid[currentX - 1][currentY].isSafe()) {
-                player.storeMovement("Move left"); // Store the movement
-                return "Move left";
+                player.storeMovement("Go left, there is only one way"); // Store the movement
+                return "Go left, there is only one way";
+            }
+
+            if (worldGrid[currentX][currentY].isGoldPresent()){
+                System.out.println(worldGrid[currentX][currentY].isGoldPresent());
+                return "Get gold";
             }
 
             // Backtracking logic if no safe unvisited tiles
@@ -92,19 +100,19 @@ public class NavigatorAgent extends Agent {
 
                 // Determine the opposite movement for backtracking
                 switch (lastMove) {
-                    case "Move up":
-                        return "Move down";
-                    case "Move down":
-                        return "Move up";
-                    case "Move right":
-                        return "Move left";
-                    case "Move left":
-                        return "Move right"; default: return "Move randomly";
+                    case "I think you need to go up":
+                        return "I guess you need to go down";
+                    case "I guess you need to go down":
+                        return "I think you need to go up";
+                    case "Right is the right way! You get it? Right! Ahaha":
+                        return "Go left, there is only one way";
+                    case "Go left, there is only one way":
+                        return "Right is the right way! You get it? Right! Ahaha"; default: return "Move randomly";
                 }
             }
 
             // Default action if no specific move is determined
-            return "Move randomly";
+            return "Then, I don't know, just move randomly";
         }
     }
 }

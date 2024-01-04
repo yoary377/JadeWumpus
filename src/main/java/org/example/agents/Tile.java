@@ -7,6 +7,16 @@ public class Tile {
 
     private boolean visited;
 
+    public boolean isGoldPresent() {
+        return goldPresent;
+    }
+
+    public void setGoldPresent(boolean goldPresent) {
+        this.goldPresent = goldPresent;
+    }
+
+    private boolean goldPresent;
+
     public boolean isVisited() {
         return visited;
     }

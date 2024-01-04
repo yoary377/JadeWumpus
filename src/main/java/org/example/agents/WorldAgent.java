@@ -45,10 +45,8 @@ public class WorldAgent extends Agent {
         public void action() {
             ACLMessage msg = receive();
             if (msg != null) {
-                System.out.println(getLocalName() + " received: " + msg.getContent());
-
                 String content = msg.getContent();
-                if (content.equals("Where am I?")) {
+                if (content.equals("Hey, I need some help!")) {
                     String[] surroundings = checkSurroundings();
                     ACLMessage reply = new ACLMessage(ACLMessage.INFORM);
                     reply.addReceiver(msg.getSender());
@@ -124,6 +122,13 @@ public class WorldAgent extends Agent {
         }
     }
 
+    private void addGold(int x, int y){
+        cave[y][x].addStatus("Gold");
+        cave[y][x].setGoldPresent(true);
+
+
+    }
+
     private void addWumpus(int x, int y) {
         cave[y][x].addStatus("Wumpus"); // Setting the Wumpus at coordinates (x, y)
 
@@ -154,6 +159,7 @@ public class WorldAgent extends Agent {
         addPit(2, 1);
         addPit(3, 0);
         addWumpus(0, 1);
+        addGold(1,1);
     }
 
     // Print the cave structure (for demonstration purposes)
@@ -247,21 +253,29 @@ public class WorldAgent extends Agent {
         public void action() {
             MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.CFP);
             ACLMessage msg = receive(mt);
-
             if (msg != null) {
-                if (msg.getContent().equals("Move up")) {
-                    movePlayer(getPlayerX(), getPlayerY() - 1); // Move the player up
-                }
-                if (msg.getContent().equals("Move down")) {
-                    movePlayer(getPlayerX(), getPlayerY() + 1);
-                }
-                if (msg.getContent().equals("Move right")) {
-                    movePlayer(getPlayerX()+1, getPlayerY());
-                }
-                if (msg.getContent().equals("Move left")) {
-                    movePlayer(getPlayerX()-1, getPlayerY());
-                }
-                if (msg.getContent().equals("Move randomly")) {
+            if (msg.getContent().matches("(?i).*up.*")) {
+                movePlayer(getPlayerX(), getPlayerY() - 1);
+                System.out.println(getLocalName() + ": Mr.Navigator,I moved him up");// Move the player up
+            }
+            if (msg.getContent().matches("(?i).*down.*")) {
+                movePlayer(getPlayerX(), getPlayerY() + 1); // Move the player down
+                System.out.println(getLocalName() + ": Mr.Navigator,I moved him down");
+            }
+            if (msg.getContent().matches("(?i).*right.*")) {
+                movePlayer(getPlayerX() + 1, getPlayerY());
+                System.out.println(getLocalName() + ": Mr.Navigator,I moved him to the right");// Move the player right
+            }
+            if (msg.getContent().matches("(?i).*left.*")) {
+                movePlayer(getPlayerX() - 1, getPlayerY());
+                System.out.println(getLocalName() + ": Mr.Navigator,He went left");// Move the player left
+            }
+
+            if (msg.getContent().matches("(?i).*gold.*")) {
+                cave[playerX][playerY].removeStatus("Gold");
+                System.out.println("I'VE GOT MY GOLD");
+            }
+            if (msg.getContent().matches("(?i).*randomly.*")) {
                     boolean moved = false;
                     while (!moved) {
                         Random random = new Random();
